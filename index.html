@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分岐メモ</title>
+
+<style>
+body {
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+background: #eef1f4;
+margin: 0;
+padding: 0;
+display: flex;
+justify-content: center;
+}
+
+.app-container {
+width: 100%;
+max-width: 420px;
+background: white;
+min-height: 100vh;
+box-shadow: 0 0 12px rgba(0,0,0,0.08);
+}
+
+header {
+background: #2c3e50;
+color: white;
+padding: 18px;
+text-align: center;
+font-size: 20px;
+font-weight: bold;
+}
+
+main {
+padding: 20px;
+}
+
+.subtitle {
+font-size: 14px;
+color: #666;
+margin-bottom: 24px;
+}
+
+.form-block {
+margin-bottom: 18px;
+}
+
+label {
+display: block;
+font-size: 14px;
+font-weight: bold;
+margin-bottom: 8px;
+}
+
+select,
+textarea {
+width: 100%;
+box-sizing: border-box;
+font-size: 15px;
+padding: 12px;
+border: 1px solid #ccd3da;
+border-radius: 10px;
+}
+
+textarea {
+min-height: 140px;
+resize: vertical;
+line-height: 1.6;
+}
+
+button {
+width: 100%;
+padding: 14px;
+border: none;
+border-radius: 12px;
+background: #2c3e50;
+color: white;
+font-size: 16px;
+font-weight: bold;
+cursor: pointer;
+margin-bottom: 8px;
+}
+
+.result-card {
+margin-top: 24px;
+padding: 16px;
+border-radius: 12px;
+background: #f4f6f8;
+}
+
+.option-block {
+margin-top: 14px;
+padding: 14px;
+background: white;
+border-radius: 10px;
+border: 1px solid #d9e0e6;
+}
+
+.option-title {
+font-weight: bold;
+margin-bottom: 10px;
+}
+
+.section-title {
+font-size: 13px;
+font-weight: bold;
+margin-top: 10px;
+}
+
+.section-text {
+font-size: 14px;
+margin-bottom: 4px;
+}
+
+.timeline {
+font-size: 14px;
+margin-bottom: 4px;
+}
+
+.compare-table {
+margin-top: 24px;
+width: 100%;
+border-collapse: collapse;
+font-size: 13px;
+}
+
+.compare-table th,
+.compare-table td {
+border: 1px solid #d9e0e6;
+padding: 6px;
+text-align: left;
+vertical-align: top;
+}
+
+.compare-table th {
+background: #f1f4f7;
+}
+
+.action-block {
+margin-top: 24px;
+padding: 16px;
+background: #ffffff;
+border-radius: 10px;
+border: 1px solid #d9e0e6;
+}
+
+.reset-btn {
+background: #8e9aa6;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="app-container">
+
+<header>
+分岐メモ
+</header>
+
+<main>
+
+<p class="subtitle">
+悩みを選択肢・時間軸・影響範囲に分けて整理します。
+</p>
+
+<div class="form-block">
+<label>相談ジャンル</label>
+<select id="genre">
+<option value="relationship">人間関係</option>
+<option value="career">進路・キャリア</option>
+<option value="daily">日常の重要判断</option>
+</select>
+</div>
+
+<div class="form-block">
+<label>悩み・迷っていること</label>
+<textarea id="problem"></textarea>
+</div>
+
+<button onclick="generateOptions()">
+分析する
+</button>
+
+<button class="reset-btn" onclick="resetData()">
+保存内容を削除
+</button>
+
+<div id="result"></div>
+
+</main>
+
+</div>
+
+<script>
+
+window.onload = function(){
+
+const saved = localStorage.getItem("bunkimemo");
+
+if(saved){
+
+const data = JSON.parse(saved);
+
+document.getElementById("genre").value = data.genre;
+document.getElementById("problem").value = data.problem;
+document.getElementById("result").innerHTML = data.result;
+
+}
+
+};
+
+function saveData(genre, problem, resultHTML){
+
+localStorage.setItem("bunkimemo", JSON.stringify({
+genre,
+problem,
+result: resultHTML
+}));
+
+}
+
+function resetData(){
+
+localStorage.removeItem("bunkimemo");
+
+document.getElementById("problem").value="";
+document.getElementById("result").innerHTML="";
+
+alert("保存内容を削除しました");
+
+}
+
+
+function generateTimeline(option, genre){
+
+if(genre==="relationship"){
+
+if(option==="関係を維持する"){
+
+return `
+<div class="timeline">1週間後：現在の関係の安心感が維持される可能性があります</div>
+<div class="timeline">1か月後：関係の安定が続く一方で違和感が残る場合もあります</div>
+<div class="timeline">半年後：関係の方向性が固定されてくる可能性があります</div>
+<div class="timeline">1年後：関係の形が習慣として定着している可能性があります</div>
+`;
+
+}
+
+if(option==="距離を置く"){
+
+return `
+<div class="timeline">1週間後：心理的負担が軽減する可能性があります</div>
+<div class="timeline">1か月後：関係の変化が相手にも伝わる可能性があります</div>
+<div class="timeline">半年後：関係の再定義が進む可能性があります</div>
+<div class="timeline">1年後：新しい距離感が安定している可能性があります</div>
+`;
+
+}
+
+}
+
+if(genre==="career"){
+
+if(option==="方向を変更する"){
+
+return `
+<div class="timeline">1週間後：不安と期待が混在する可能性があります</div>
+<div class="timeline">1か月後：新しい選択の現実感が強まる可能性があります</div>
+<div class="timeline">半年後：新しい環境への適応が進む可能性があります</div>
+<div class="timeline">1年後：方向転換の成果が見え始める可能性があります</div>
+`;
+
+}
+
+}
+
+return `
+<div class="timeline">1週間後：小さな変化を実感し始める可能性があります</div>
+<div class="timeline">1か月後：周囲との関係や環境に影響が出始めます</div>
+<div class="timeline">半年後：方向性が安定してくる可能性があります</div>
+<div class="timeline">1年後：選択の結果が形になっている可能性があります</div>
+`;
+
+}
+
+
+function generateImpact(option, genre){
+
+if(genre==="relationship" && option==="距離を置く"){
+
+return {
+merit:"心理的な負担が軽減する可能性があります",
+risk:"関係が希薄になる可能性があります",
+relation:"距離感の再構築が進む可能性があります",
+money:"金銭的影響はほぼ発生しない可能性があります",
+mental:"安心感が生まれる可能性があります",
+regret:"急に距離を取りすぎたと感じる可能性があります"
+};
+
+}
+
+return {
+merit:"状況を整理しやすくなる可能性があります",
+risk:"期待した変化がすぐには出ない場合があります",
+relation:"周囲との距離感が変化する可能性があります",
+money:"大きな変化は発生しない可能性があります",
+mental:"判断したことによる安心感が生まれる可能性があります",
+regret:"別の選択肢を試さなかった場合に迷いが残る可能性があります"
+};
+
+}
+
+
+function actionBlock(){
+
+return `
+<div class="action-block">
+<div class="section-title">今すぐ確認すること</div>
+<div class="section-text">
+・判断期限があるか整理する<br>
+・関係者の意向を確認する<br>
+・選択を小さく試せる方法があるか検討する
+</div>
+
+<div class="section-title">次に取る行動</div>
+<div class="section-text">
+・情報を追加で集める<br>
+・短期間の試行期間を設定する<br>
+・第三者の意見を一度聞いてみる
+</div>
+</div>
+`;
+
+}
+
+
+function generateCompareTable(options, impacts){
+
+return `
+<table class="compare-table">
+<tr>
+<th>観点</th>
+<th>${options[0]}</th>
+<th>${options[1]}</th>
+<th>${options[2]}</th>
+</tr>
+
+<tr>
+<th>メリット</th>
+<td>${impacts[0].merit}</td>
+<td>${impacts[1].merit}</td>
+<td>${impacts[2].merit}</td>
+</tr>
+
+<tr>
+<th>リスク</th>
+<td>${impacts[0].risk}</td>
+<td>${impacts[1].risk}</td>
+<td>${impacts[2].risk}</td>
+</tr>
+
+<tr>
+<th>人間関係</th>
+<td>${impacts[0].relation}</td>
+<td>${impacts[1].relation}</td>
+<td>${impacts[2].relation}</td>
+</tr>
+
+<tr>
+<th>お金</th>
+<td>${impacts[0].money}</td>
+<td>${impacts[1].money}</td>
+<td>${impacts[2].money}</td>
+</tr>
+
+<tr>
+<th>メンタル</th>
+<td>${impacts[0].mental}</td>
+<td>${impacts[1].mental}</td>
+<td>${impacts[2].mental}</td>
+</tr>
+
+<tr>
+<th>後悔</th>
+<td>${impacts[0].regret}</td>
+<td>${impacts[1].regret}</td>
+<td>${impacts[2].regret}</td>
+</tr>
+
+</table>
+`;
+
+}
+
+
+function generateOptions(){
+
+const genre=document.getElementById("genre").value;
+const problem=document.getElementById("problem").value;
+
+if(problem.trim()===""){
+alert("悩みを入力してください");
+return;
+}
+
+let options=[];
+
+if(genre==="relationship"){
+options=["関係を維持する","距離を置く","段階的に関係を調整する"];
+}
+else if(genre==="career"){
+options=["現在の進路を維持する","方向を変更する","情報収集期間を設ける"];
+}
+else{
+options=["現状を維持する","実行に移す","小さく試して判断する"];
+}
+
+let html=`<div class="result-card">`;
+
+let impacts=[];
+
+options.forEach(option=>{
+
+let impact=generateImpact(option, genre);
+impacts.push(impact);
+
+html+=`
+<div class="option-block">
+<div class="option-title">${option}</div>
+${generateTimeline(option, genre)}
+<div class="section-title">メリット</div>
+<div class="section-text">${impact.merit}</div>
+<div class="section-title">リスク</div>
+<div class="section-text">${impact.risk}</div>
+</div>
+`;
+
+});
+
+html+=generateCompareTable(options, impacts);
+html+=actionBlock();
+html+="</div>";
+
+document.getElementById("result").innerHTML=html;
+
+saveData(genre, problem, html);
+
+}
+
+</script>
+
+</body>
+</html>
