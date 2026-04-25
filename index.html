@@ -184,7 +184,7 @@ line-height: 1.6;
 </p>
 
 <div class="form-block">
-<label>相談ジャンル</label>
+<label for="genre">相談ジャンル</label>
 <select id="genre">
 <option value="人間関係">人間関係</option>
 <option value="進路・キャリア">進路・キャリア</option>
@@ -193,12 +193,12 @@ line-height: 1.6;
 </div>
 
 <div class="form-block">
-<label>悩み・迷っていること</label>
+<label for="problem">悩み・迷っていること</label>
 <textarea id="problem" placeholder="例：サークルを続けるか辞めるか迷っている"></textarea>
 </div>
 
-<button id="analyzeBtn" onclick="analyzeWithAI()">AIで分析する</button>
-<button class="reset-btn" onclick="resetData()">保存内容を削除</button>
+<button id="analyzeBtn" type="button">AIで分析する</button>
+<button class="reset-btn" type="button" id="resetBtn">保存内容を削除</button>
 
 <div id="status" class="status"></div>
 <div id="result"></div>
@@ -209,313 +209,269 @@ line-height: 1.6;
 <script>
 const API_URL = "https://bunkimemo-api.figie-cc.workers.dev";
 
-window.onload = function() {
-const saved = localStorage.getItem("bunkimemo");
-if (saved) {
-const data = JSON.parse(saved);
-document.getElementById("genre").value = data.genre || "人間関係";
-document.getElementById("problem").value = data.problem || "";
-document.getElementById("result").innerHTML = data.result || "";
-document.getElementById("status").textContent = data.status || "";
-}
-};
+document.addEventListener("DOMContentLoaded", function() {
+  document.getElementById("analyzeBtn").addEventListener("click", analyzeWithAI);
+  document.getElementById("resetBtn").addEventListener("click", resetData);
+
+  const saved = localStorage.getItem("bunkimemo");
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      document.getElementById("genre").value = data.genre || "人間関係";
+      document.getElementById("problem").value = data.problem || "";
+      document.getElementById("result").innerHTML = data.result || "";
+      document.getElementById("status").textContent = data.status || "";
+    } catch (e) {
+      localStorage.removeItem("bunkimemo");
+    }
+  }
+});
 
 function saveData(genre, problem, resultHTML, statusText) {
-localStorage.setItem("bunkimemo", JSON.stringify({
-genre,
-problem,
-result: resultHTML,
-status: statusText
-}));
+  localStorage.setItem("bunkimemo", JSON.stringify({
+    genre,
+    problem,
+    result: resultHTML,
+    status: statusText
+  }));
 }
 
 function resetData() {
-localStorage.removeItem("bunkimemo");
-document.getElementById("problem").value = "";
-document.getElementById("result").innerHTML = "";
-document.getElementById("status").textContent = "";
-alert("保存内容を削除しました");
+  localStorage.removeItem("bunkimemo");
+  document.getElementById("problem").value = "";
+  document.getElementById("result").innerHTML = "";
+  document.getElementById("status").textContent = "";
+  alert("保存内容を削除しました");
 }
 
 async function analyzeWithAI() {
-const genre = document.getElementById("genre").value;
-const problem = document.getElementById("problem").value.trim();
-const button = document.getElementById("analyzeBtn");
-const status = document.getElementById("status");
-const result = document.getElementById("result");
+  const genre = document.getElementById("genre").value;
+  const problem = document.getElementById("problem").value.trim();
+  const button = document.getElementById("analyzeBtn");
+  const status = document.getElementById("status");
+  const result = document.getElementById("result");
 
-if (problem === "") {
-alert("悩みを入力してください");
-return;
-}
+  if (problem === "") {
+    alert("悩みを入力してください");
+    return;
+  }
 
-button.disabled = true;
-button.textContent = "分析中...";
-status.textContent = "AIが選択肢を整理しています。";
-result.innerHTML = "";
+  button.disabled = true;
+  button.textContent = "分析中...";
+  status.textContent = "AIが選択肢を整理しています。";
+  result.innerHTML = "";
 
-try {
-const response = await fetch(API_URL, {
-method: "POST",
-headers: {
-"Content-Type": "application/json"
-},
-body: JSON.stringify({
-genre,
-problem
-})
-});
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        genre,
+        problem
+      })
+    });
 
-const data = await response.json();
+    const data = await response.json();
 
-if (!response.ok) {
-throw new Error(data.error || "AI分析に失敗しました。");
-}
+    if (!response.ok) {
+      throw new Error(data.error || data.detail || "AI分析に失敗しました。");
+    }
 
-const normalized = normalizeResult(data);
+    const normalized = normalizeResult(data);
 
-if (!normalized || !Array.isArray(normalized.options)) {
-throw new Error("AI結果の形式を読み取れませんでした。");
-}
+    if (!normalized || !Array.isArray(normalized.options) || normalized.options.length === 0) {
+      throw new Error("AI結果の形式を読み取れませんでした。");
+    }
 
-const html = renderResult(normalized);
-const statusText = `残り利用回数：${data.remaining ?? "不明"}回`;
+    const html = renderResult(normalized);
+    const statusText = `残り利用回数：${data.remaining ?? "不明"}回`;
 
-result.innerHTML = html;
-status.textContent = statusText;
+    result.innerHTML = html;
+    status.textContent = statusText;
 
-saveData(genre, problem, html, statusText);
+    saveData(genre, problem, html, statusText);
 
-} catch (error) {
-status.textContent = "";
-result.innerHTML = `
-<div class="result-card">
-<div class="section-title">エラー</div>
-<div class="section-text">${escapeHTML(error.message)}</div>
-</div>
-`;
-} finally {
-button.disabled = false;
-button.textContent = "AIで分析する";
-}
+  } catch (error) {
+    status.textContent = "";
+    result.innerHTML = `
+      <div class="result-card">
+        <div class="section-title">エラー</div>
+        <div class="section-text">${escapeHTML(error.message)}</div>
+      </div>
+    `;
+  } finally {
+    button.disabled = false;
+    button.textContent = "AIで分析する";
+  }
 }
 
 function normalizeResult(data) {
-if (!data) return null;
+  if (!data) return null;
 
-let result = data.result || data;
+  let result = data.result || data;
 
-if (result.response && typeof result.response === "object") {
-result = result.response;
+  if (typeof result === "string") {
+    try {
+      result = JSON.parse(result);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  if (result.response) {
+    if (typeof result.response === "string") {
+      try {
+        result = JSON.parse(result.response);
+      } catch (e) {
+        return null;
+      }
+    } else if (typeof result.response === "object") {
+      result = result.response;
+    }
+  }
+
+  if (!Array.isArray(result.options)) {
+    return null;
+  }
+
+  result.options = result.options
+    .filter(Boolean)
+    .map(normalizeOption)
+    .filter(option => option.title);
+
+  result.checkNow = Array.isArray(result.checkNow) ? result.checkNow : [];
+  result.nextActions = Array.isArray(result.nextActions) ? result.nextActions : [];
+  result.note = result.note || "これは未来予測ではなく、判断材料を整理するための参考情報です。";
+
+  return result;
 }
 
-if (typeof result.response === "string") {
-try {
-result = JSON.parse(result.response);
-} catch (e) {}
-}
-
-if (typeof result === "string") {
-try {
-result = JSON.parse(result);
-} catch (e) {
-return null;
-}
-}
-
-return result;
+function normalizeOption(option) {
+  return {
+    title: option.title || "選択肢",
+    timeline: {
+      oneWeek: option.timeline?.oneWeek || "",
+      oneMonth: option.timeline?.oneMonth || "",
+      sixMonths: option.timeline?.sixMonths || "",
+      oneYear: option.timeline?.oneYear || ""
+    },
+    impact: {
+      merit: option.impact?.merit || "",
+      risk: option.impact?.risk || "",
+      relation: option.impact?.relation || "",
+      money: option.impact?.money || "",
+      mental: option.impact?.mental || "",
+      regret: option.impact?.regret || ""
+    }
+  };
 }
 
 function renderResult(data) {
-let html = `<div class="result-card">`;
+  let html = `<div class="result-card">`;
 
-data.options.forEach(option => {
-html += `
-<div class="option-block">
-<div class="option-title">${escapeHTML(option.title)}</div>
+  data.options.forEach(option => {
+    html += `
+      <div class="option-block">
+        <div class="option-title">${escapeHTML(option.title)}</div>
 
-<div class="section-title">時間軸</div>
-<div class="timeline">1週間後：${escapeHTML(option.timeline.oneWeek)}</div>
-<div class="timeline">1か月後：${escapeHTML(option.timeline.oneMonth)}</div>
-<div class="timeline">半年後：${escapeHTML(option.timeline.sixMonths)}</div>
-<div class="timeline">1年後：${escapeHTML(option.timeline.oneYear)}</div>
+        <div class="section-title">時間軸</div>
+        <div class="timeline">1週間後：${escapeHTML(option.timeline.oneWeek)}</div>
+        <div class="timeline">1か月後：${escapeHTML(option.timeline.oneMonth)}</div>
+        <div class="timeline">半年後：${escapeHTML(option.timeline.sixMonths)}</div>
+        <div class="timeline">1年後：${escapeHTML(option.timeline.oneYear)}</div>
 
-<div class="section-title">メリット</div>
-<div class="section-text">${escapeHTML(option.impact.merit)}</div>
+        <div class="section-title">メリット</div>
+        <div class="section-text">${escapeHTML(option.impact.merit)}</div>
 
-<div class="section-title">リスク</div>
-<div class="section-text">${escapeHTML(option.impact.risk)}</div>
+        <div class="section-title">リスク</div>
+        <div class="section-text">${escapeHTML(option.impact.risk)}</div>
 
-<div class="section-title">人間関係への影響</div>
-<div class="section-text">${escapeHTML(option.impact.relation)}</div>
+        <div class="section-title">人間関係への影響</div>
+        <div class="section-text">${escapeHTML(option.impact.relation)}</div>
 
-<div class="section-title">お金への影響</div>
-<div class="section-text">${escapeHTML(option.impact.money)}</div>
+        <div class="section-title">お金への影響</div>
+        <div class="section-text">${escapeHTML(option.impact.money)}</div>
 
-<div class="section-title">メンタルへの影響</div>
-<div class="section-text">${escapeHTML(option.impact.mental)}</div>
+        <div class="section-title">メンタルへの影響</div>
+        <div class="section-text">${escapeHTML(option.impact.mental)}</div>
 
-<div class="section-title">後悔しやすい点</div>
-<div class="section-text">${escapeHTML(option.impact.regret)}</div>
-</div>
-`;
-});
+        <div class="section-title">後悔しやすい点</div>
+        <div class="section-text">${escapeHTML(option.impact.regret)}</div>
+      </div>
+    `;
+  });
 
-html += renderCompareTable(data.options);
-html += renderActionBlock(data);
-html += `</div>`;
+  html += renderCompareTable(data.options);
+  html += renderActionBlock(data);
+  html += `</div>`;
 
-return html;
+  return html;
 }
 
 function renderCompareTable(options) {
+  if (!Array.isArray(options) || options.length < 2) {
+    return "";
+  }
 
-if (!Array.isArray(options) || options.length < 3) {
-return "";
-}
+  const headers = options.map(option => `<th>${escapeHTML(option.title)}</th>`).join("");
 
-return `
-<div class="compare-wrap">
-<table class="compare-table">
-<tr>
-<th>観点</th>
-<th>${escapeHTML(options[0]?.title ?? "")}</th>
-<th>${escapeHTML(options[1]?.title ?? "")}</th>
-<th>${escapeHTML(options[2]?.title ?? "")}</th>
-</tr>
+  const row = (label, getter) => `
+    <tr>
+      <th>${label}</th>
+      ${options.map(option => `<td>${escapeHTML(getter(option))}</td>`).join("")}
+    </tr>
+  `;
 
-<tr>
-<th>メリット</th>
-<td>${escapeHTML(options[0]?.impact?.merit ?? "")}</td>
-<td>${escapeHTML(options[1]?.impact?.merit ?? "")}</td>
-<td>${escapeHTML(options[2]?.impact?.merit ?? "")}</td>
-</tr>
-
-<tr>
-<th>リスク</th>
-<td>${escapeHTML(options[0]?.impact?.risk ?? "")}</td>
-<td>${escapeHTML(options[1]?.impact?.risk ?? "")}</td>
-<td>${escapeHTML(options[2]?.impact?.risk ?? "")}</td>
-</tr>
-
-<tr>
-<th>人間関係</th>
-<td>${escapeHTML(options[0]?.impact?.relation ?? "")}</td>
-<td>${escapeHTML(options[1]?.impact?.relation ?? "")}</td>
-<td>${escapeHTML(options[2]?.impact?.relation ?? "")}</td>
-</tr>
-
-<tr>
-<th>お金</th>
-<td>${escapeHTML(options[0]?.impact?.money ?? "")}</td>
-<td>${escapeHTML(options[1]?.impact?.money ?? "")}</td>
-<td>${escapeHTML(options[2]?.impact?.money ?? "")}</td>
-</tr>
-
-<tr>
-<th>メンタル</th>
-<td>${escapeHTML(options[0]?.impact?.mental ?? "")}</td>
-<td>${escapeHTML(options[1]?.impact?.mental ?? "")}</td>
-<td>${escapeHTML(options[2]?.impact?.mental ?? "")}</td>
-</tr>
-
-<tr>
-<th>後悔</th>
-<td>${escapeHTML(options[0]?.impact?.regret ?? "")}</td>
-<td>${escapeHTML(options[1]?.impact?.regret ?? "")}</td>
-<td>${escapeHTML(options[2]?.impact?.regret ?? "")}</td>
-</tr>
-
-</table>
-</div>
-`;
-} {
-return `
-<div class="compare-wrap">
-<table class="compare-table">
-<tr>
-<th>観点</th>
-<th>${escapeHTML(options[0].title)}</th>
-<th>${escapeHTML(options[1].title)}</th>
-<th>${escapeHTML(options[2].title)}</th>
-</tr>
-
-<tr>
-<th>メリット</th>
-<td>${escapeHTML(options[0].impact.merit)}</td>
-<td>${escapeHTML(options[1].impact.merit)}</td>
-<td>${escapeHTML(options[2].impact.merit)}</td>
-</tr>
-
-<tr>
-<th>リスク</th>
-<td>${escapeHTML(options[0].impact.risk)}</td>
-<td>${escapeHTML(options[1].impact.risk)}</td>
-<td>${escapeHTML(options[2].impact.risk)}</td>
-</tr>
-
-<tr>
-<th>人間関係</th>
-<td>${escapeHTML(options[0].impact.relation)}</td>
-<td>${escapeHTML(options[1].impact.relation)}</td>
-<td>${escapeHTML(options[2].impact.relation)}</td>
-</tr>
-
-<tr>
-<th>お金</th>
-<td>${escapeHTML(options[0].impact.money)}</td>
-<td>${escapeHTML(options[1].impact.money)}</td>
-<td>${escapeHTML(options[2].impact.money)}</td>
-</tr>
-
-<tr>
-<th>メンタル</th>
-<td>${escapeHTML(options[0].impact.mental)}</td>
-<td>${escapeHTML(options[1].impact.mental)}</td>
-<td>${escapeHTML(options[2].impact.mental)}</td>
-</tr>
-
-<tr>
-<th>後悔</th>
-<td>${escapeHTML(options[0].impact.regret)}</td>
-<td>${escapeHTML(options[1].impact.regret)}</td>
-<td>${escapeHTML(options[2].impact.regret)}</td>
-</tr>
-</table>
-</div>
-`;
+  return `
+    <div class="compare-wrap">
+      <table class="compare-table">
+        <tr>
+          <th>観点</th>
+          ${headers}
+        </tr>
+        ${row("メリット", option => option.impact.merit)}
+        ${row("リスク", option => option.impact.risk)}
+        ${row("人間関係", option => option.impact.relation)}
+        ${row("お金", option => option.impact.money)}
+        ${row("メンタル", option => option.impact.mental)}
+        ${row("後悔", option => option.impact.regret)}
+      </table>
+    </div>
+  `;
 }
 
 function renderActionBlock(data) {
-const checkNow = Array.isArray(data.checkNow) ? data.checkNow : [];
-const nextActions = Array.isArray(data.nextActions) ? data.nextActions : [];
+  const checkNow = Array.isArray(data.checkNow) ? data.checkNow : [];
+  const nextActions = Array.isArray(data.nextActions) ? data.nextActions : [];
 
-return `
-<div class="action-block">
-<div class="section-title">今すぐ確認すること</div>
-<div class="section-text">
-${checkNow.map(item => `・${escapeHTML(item)}`).join("<br>")}
-</div>
+  return `
+    <div class="action-block">
+      <div class="section-title">今すぐ確認すること</div>
+      <div class="section-text">
+        ${checkNow.length ? checkNow.map(item => `・${escapeHTML(item)}`).join("<br>") : "・追加で確認すべき条件を整理してください"}
+      </div>
 
-<div class="section-title">次に取る行動</div>
-<div class="section-text">
-${nextActions.map(item => `・${escapeHTML(item)}`).join("<br>")}
-</div>
+      <div class="section-title">次に取る行動</div>
+      <div class="section-text">
+        ${nextActions.length ? nextActions.map(item => `・${escapeHTML(item)}`).join("<br>") : "・小さく試せる行動を1つ決めてください"}
+      </div>
 
-<div class="note">
-${escapeHTML(data.note || "これは未来予測ではなく、判断材料を整理するための参考情報です。")}
-</div>
-</div>
-`;
+      <div class="note">
+        ${escapeHTML(data.note)}
+      </div>
+    </div>
+  `;
 }
 
 function escapeHTML(str) {
-return String(str ?? "")
-.replace(/&/g, "&amp;")
-.replace(/</g, "&lt;")
-.replace(/>/g, "&gt;")
-.replace(/"/g, "&quot;")
-.replace(/'/g, "&#039;");
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 </script>
 
