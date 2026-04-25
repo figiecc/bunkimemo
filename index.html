@@ -82,6 +82,21 @@ cursor: pointer;
 margin-bottom: 8px;
 }
 
+button:disabled {
+background: #9aa6b2;
+cursor: not-allowed;
+}
+
+.reset-btn {
+background: #8e9aa6;
+}
+
+.status {
+font-size: 13px;
+color: #666;
+margin-top: 8px;
+}
+
 .result-card {
 margin-top: 24px;
 padding: 16px;
@@ -111,11 +126,17 @@ margin-top: 10px;
 .section-text {
 font-size: 14px;
 margin-bottom: 4px;
+line-height: 1.6;
 }
 
 .timeline {
 font-size: 14px;
 margin-bottom: 4px;
+line-height: 1.6;
+}
+
+.compare-wrap {
+overflow-x: auto;
 }
 
 .compare-table {
@@ -123,6 +144,7 @@ margin-top: 24px;
 width: 100%;
 border-collapse: collapse;
 font-size: 13px;
+min-width: 620px;
 }
 
 .compare-table th,
@@ -145,11 +167,13 @@ border-radius: 10px;
 border: 1px solid #d9e0e6;
 }
 
-.reset-btn {
-background: #8e9aa6;
+.note {
+margin-top: 16px;
+font-size: 13px;
+color: #555;
+line-height: 1.6;
 }
 </style>
-
 </head>
 
 <body>
@@ -169,25 +193,26 @@ background: #8e9aa6;
 <div class="form-block">
 <label>相談ジャンル</label>
 <select id="genre">
-<option value="relationship">人間関係</option>
-<option value="career">進路・キャリア</option>
-<option value="daily">日常の重要判断</option>
+<option value="人間関係">人間関係</option>
+<option value="進路・キャリア">進路・キャリア</option>
+<option value="日常の重要判断">日常の重要判断</option>
 </select>
 </div>
 
 <div class="form-block">
 <label>悩み・迷っていること</label>
-<textarea id="problem"></textarea>
+<textarea id="problem" placeholder="例：サークルを続けるか辞めるか迷っている"></textarea>
 </div>
 
-<button onclick="generateOptions()">
-分析する
+<button id="analyzeBtn" onclick="analyzeWithAI()">
+AIで分析する
 </button>
 
 <button class="reset-btn" onclick="resetData()">
 保存内容を削除
 </button>
 
+<div id="status" class="status"></div>
 <div id="result"></div>
 
 </main>
@@ -195,261 +220,221 @@ background: #8e9aa6;
 </div>
 
 <script>
+const API_URL = "https://bunkimemo-api.figie-cc.workers.dev";
 
-window.onload = function(){
-
+window.onload = function() {
 const saved = localStorage.getItem("bunkimemo");
 
-if(saved){
-
+if (saved) {
 const data = JSON.parse(saved);
-
-document.getElementById("genre").value = data.genre;
-document.getElementById("problem").value = data.problem;
-document.getElementById("result").innerHTML = data.result;
-
+document.getElementById("genre").value = data.genre || "人間関係";
+document.getElementById("problem").value = data.problem || "";
+document.getElementById("result").innerHTML = data.result || "";
+document.getElementById("status").textContent = data.status || "";
 }
-
 };
 
-function saveData(genre, problem, resultHTML){
-
+function saveData(genre, problem, resultHTML, statusText) {
 localStorage.setItem("bunkimemo", JSON.stringify({
 genre,
 problem,
-result: resultHTML
+result: resultHTML,
+status: statusText
 }));
-
 }
 
-function resetData(){
-
+function resetData() {
 localStorage.removeItem("bunkimemo");
-
-document.getElementById("problem").value="";
-document.getElementById("result").innerHTML="";
-
+document.getElementById("problem").value = "";
+document.getElementById("result").innerHTML = "";
+document.getElementById("status").textContent = "";
 alert("保存内容を削除しました");
-
 }
 
+async function analyzeWithAI() {
+const genre = document.getElementById("genre").value;
+const problem = document.getElementById("problem").value.trim();
+const button = document.getElementById("analyzeBtn");
+const status = document.getElementById("status");
+const result = document.getElementById("result");
 
-function generateTimeline(option, genre){
-
-if(genre==="relationship"){
-
-if(option==="関係を維持する"){
-
-return `
-<div class="timeline">1週間後：現在の関係の安心感が維持される可能性があります</div>
-<div class="timeline">1か月後：関係の安定が続く一方で違和感が残る場合もあります</div>
-<div class="timeline">半年後：関係の方向性が固定されてくる可能性があります</div>
-<div class="timeline">1年後：関係の形が習慣として定着している可能性があります</div>
-`;
-
-}
-
-if(option==="距離を置く"){
-
-return `
-<div class="timeline">1週間後：心理的負担が軽減する可能性があります</div>
-<div class="timeline">1か月後：関係の変化が相手にも伝わる可能性があります</div>
-<div class="timeline">半年後：関係の再定義が進む可能性があります</div>
-<div class="timeline">1年後：新しい距離感が安定している可能性があります</div>
-`;
-
-}
-
-}
-
-if(genre==="career"){
-
-if(option==="方向を変更する"){
-
-return `
-<div class="timeline">1週間後：不安と期待が混在する可能性があります</div>
-<div class="timeline">1か月後：新しい選択の現実感が強まる可能性があります</div>
-<div class="timeline">半年後：新しい環境への適応が進む可能性があります</div>
-<div class="timeline">1年後：方向転換の成果が見え始める可能性があります</div>
-`;
-
-}
-
-}
-
-return `
-<div class="timeline">1週間後：小さな変化を実感し始める可能性があります</div>
-<div class="timeline">1か月後：周囲との関係や環境に影響が出始めます</div>
-<div class="timeline">半年後：方向性が安定してくる可能性があります</div>
-<div class="timeline">1年後：選択の結果が形になっている可能性があります</div>
-`;
-
-}
-
-
-function generateImpact(option, genre){
-
-if(genre==="relationship" && option==="距離を置く"){
-
-return {
-merit:"心理的な負担が軽減する可能性があります",
-risk:"関係が希薄になる可能性があります",
-relation:"距離感の再構築が進む可能性があります",
-money:"金銭的影響はほぼ発生しない可能性があります",
-mental:"安心感が生まれる可能性があります",
-regret:"急に距離を取りすぎたと感じる可能性があります"
-};
-
-}
-
-return {
-merit:"状況を整理しやすくなる可能性があります",
-risk:"期待した変化がすぐには出ない場合があります",
-relation:"周囲との距離感が変化する可能性があります",
-money:"大きな変化は発生しない可能性があります",
-mental:"判断したことによる安心感が生まれる可能性があります",
-regret:"別の選択肢を試さなかった場合に迷いが残る可能性があります"
-};
-
-}
-
-
-function actionBlock(){
-
-return `
-<div class="action-block">
-<div class="section-title">今すぐ確認すること</div>
-<div class="section-text">
-・判断期限があるか整理する<br>
-・関係者の意向を確認する<br>
-・選択を小さく試せる方法があるか検討する
-</div>
-
-<div class="section-title">次に取る行動</div>
-<div class="section-text">
-・情報を追加で集める<br>
-・短期間の試行期間を設定する<br>
-・第三者の意見を一度聞いてみる
-</div>
-</div>
-`;
-
-}
-
-
-function generateCompareTable(options, impacts){
-
-return `
-<table class="compare-table">
-<tr>
-<th>観点</th>
-<th>${options[0]}</th>
-<th>${options[1]}</th>
-<th>${options[2]}</th>
-</tr>
-
-<tr>
-<th>メリット</th>
-<td>${impacts[0].merit}</td>
-<td>${impacts[1].merit}</td>
-<td>${impacts[2].merit}</td>
-</tr>
-
-<tr>
-<th>リスク</th>
-<td>${impacts[0].risk}</td>
-<td>${impacts[1].risk}</td>
-<td>${impacts[2].risk}</td>
-</tr>
-
-<tr>
-<th>人間関係</th>
-<td>${impacts[0].relation}</td>
-<td>${impacts[1].relation}</td>
-<td>${impacts[2].relation}</td>
-</tr>
-
-<tr>
-<th>お金</th>
-<td>${impacts[0].money}</td>
-<td>${impacts[1].money}</td>
-<td>${impacts[2].money}</td>
-</tr>
-
-<tr>
-<th>メンタル</th>
-<td>${impacts[0].mental}</td>
-<td>${impacts[1].mental}</td>
-<td>${impacts[2].mental}</td>
-</tr>
-
-<tr>
-<th>後悔</th>
-<td>${impacts[0].regret}</td>
-<td>${impacts[1].regret}</td>
-<td>${impacts[2].regret}</td>
-</tr>
-
-</table>
-`;
-
-}
-
-
-function generateOptions(){
-
-const genre=document.getElementById("genre").value;
-const problem=document.getElementById("problem").value;
-
-if(problem.trim()===""){
+if (problem === "") {
 alert("悩みを入力してください");
 return;
 }
 
-let options=[];
+button.disabled = true;
+button.textContent = "分析中...";
+status.textContent = "AIが選択肢を整理しています。";
+result.innerHTML = "";
 
-if(genre==="relationship"){
-options=["関係を維持する","距離を置く","段階的に関係を調整する"];
-}
-else if(genre==="career"){
-options=["現在の進路を維持する","方向を変更する","情報収集期間を設ける"];
-}
-else{
-options=["現状を維持する","実行に移す","小さく試して判断する"];
-}
-
-let html=`<div class="result-card">`;
-
-let impacts=[];
-
-options.forEach(option=>{
-
-let impact=generateImpact(option, genre);
-impacts.push(impact);
-
-html+=`
-<div class="option-block">
-<div class="option-title">${option}</div>
-${generateTimeline(option, genre)}
-<div class="section-title">メリット</div>
-<div class="section-text">${impact.merit}</div>
-<div class="section-title">リスク</div>
-<div class="section-text">${impact.risk}</div>
-</div>
-`;
-
+try {
+const response = await fetch(API_URL, {
+method: "POST",
+headers: {
+"Content-Type": "application/json"
+},
+body: JSON.stringify({
+genre,
+problem
+})
 });
 
-html+=generateCompareTable(options, impacts);
-html+=actionBlock();
-html+="</div>";
+const data = await response.json();
 
-document.getElementById("result").innerHTML=html;
-
-saveData(genre, problem, html);
-
+if (!response.ok) {
+throw new Error(data.error || "AI分析に失敗しました。");
 }
 
+const html = renderResult(data.result);
+const statusText = `残り利用回数：${data.remaining}回`;
+
+result.innerHTML = html;
+status.textContent = statusText;
+
+saveData(genre, problem, html, statusText);
+
+} catch (error) {
+status.textContent = "";
+result.innerHTML = `
+<div class="result-card">
+<div class="section-title">エラー</div>
+<div class="section-text">${escapeHTML(error.message)}</div>
+</div>
+`;
+} finally {
+button.disabled = false;
+button.textContent = "AIで分析する";
+}
+}
+
+function renderResult(data) {
+let html = `<div class="result-card">`;
+
+data.options.forEach(option => {
+html += `
+<div class="option-block">
+<div class="option-title">${escapeHTML(option.title)}</div>
+
+<div class="section-title">時間軸</div>
+<div class="timeline">1週間後：${escapeHTML(option.timeline.oneWeek)}</div>
+<div class="timeline">1か月後：${escapeHTML(option.timeline.oneMonth)}</div>
+<div class="timeline">半年後：${escapeHTML(option.timeline.sixMonths)}</div>
+<div class="timeline">1年後：${escapeHTML(option.timeline.oneYear)}</div>
+
+<div class="section-title">メリット</div>
+<div class="section-text">${escapeHTML(option.impact.merit)}</div>
+
+<div class="section-title">リスク</div>
+<div class="section-text">${escapeHTML(option.impact.risk)}</div>
+
+<div class="section-title">人間関係への影響</div>
+<div class="section-text">${escapeHTML(option.impact.relation)}</div>
+
+<div class="section-title">お金への影響</div>
+<div class="section-text">${escapeHTML(option.impact.money)}</div>
+
+<div class="section-title">メンタルへの影響</div>
+<div class="section-text">${escapeHTML(option.impact.mental)}</div>
+
+<div class="section-title">後悔しやすい点</div>
+<div class="section-text">${escapeHTML(option.impact.regret)}</div>
+</div>
+`;
+});
+
+html += renderCompareTable(data.options);
+html += renderActionBlock(data);
+html += `</div>`;
+
+return html;
+}
+
+function renderCompareTable(options) {
+return `
+<div class="compare-wrap">
+<table class="compare-table">
+<tr>
+<th>観点</th>
+<th>${escapeHTML(options[0].title)}</th>
+<th>${escapeHTML(options[1].title)}</th>
+<th>${escapeHTML(options[2].title)}</th>
+</tr>
+
+<tr>
+<th>メリット</th>
+<td>${escapeHTML(options[0].impact.merit)}</td>
+<td>${escapeHTML(options[1].impact.merit)}</td>
+<td>${escapeHTML(options[2].impact.merit)}</td>
+</tr>
+
+<tr>
+<th>リスク</th>
+<td>${escapeHTML(options[0].impact.risk)}</td>
+<td>${escapeHTML(options[1].impact.risk)}</td>
+<td>${escapeHTML(options[2].impact.risk)}</td>
+</tr>
+
+<tr>
+<th>人間関係</th>
+<td>${escapeHTML(options[0].impact.relation)}</td>
+<td>${escapeHTML(options[1].impact.relation)}</td>
+<td>${escapeHTML(options[2].impact.relation)}</td>
+</tr>
+
+<tr>
+<th>お金</th>
+<td>${escapeHTML(options[0].impact.money)}</td>
+<td>${escapeHTML(options[1].impact.money)}</td>
+<td>${escapeHTML(options[2].impact.money)}</td>
+</tr>
+
+<tr>
+<th>メンタル</th>
+<td>${escapeHTML(options[0].impact.mental)}</td>
+<td>${escapeHTML(options[1].impact.mental)}</td>
+<td>${escapeHTML(options[2].impact.mental)}</td>
+</tr>
+
+<tr>
+<th>後悔</th>
+<td>${escapeHTML(options[0].impact.regret)}</td>
+<td>${escapeHTML(options[1].impact.regret)}</td>
+<td>${escapeHTML(options[2].impact.regret)}</td>
+</tr>
+</table>
+</div>
+`;
+}
+
+function renderActionBlock(data) {
+return `
+<div class="action-block">
+<div class="section-title">今すぐ確認すること</div>
+<div class="section-text">
+${data.checkNow.map(item => `・${escapeHTML(item)}`).join("<br>")}
+</div>
+
+<div class="section-title">次に取る行動</div>
+<div class="section-text">
+${data.nextActions.map(item => `・${escapeHTML(item)}`).join("<br>")}
+</div>
+
+<div class="note">
+${escapeHTML(data.note || "これは未来予測ではなく、判断材料を整理するための参考情報です。")}
+</div>
+</div>
+`;
+}
+
+function escapeHTML(str) {
+return String(str)
+.replace(/&/g, "&amp;")
+.replace(/</g, "&lt;")
+.replace(/>/g, "&gt;")
+.replace(/"/g, "&quot;")
+.replace(/'/g, "&#039;");
+}
 </script>
 
 </body>
