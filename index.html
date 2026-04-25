@@ -369,6 +369,67 @@ return html;
 }
 
 function renderCompareTable(options) {
+
+if (!Array.isArray(options) || options.length < 3) {
+return "";
+}
+
+return `
+<div class="compare-wrap">
+<table class="compare-table">
+<tr>
+<th>観点</th>
+<th>${escapeHTML(options[0]?.title ?? "")}</th>
+<th>${escapeHTML(options[1]?.title ?? "")}</th>
+<th>${escapeHTML(options[2]?.title ?? "")}</th>
+</tr>
+
+<tr>
+<th>メリット</th>
+<td>${escapeHTML(options[0]?.impact?.merit ?? "")}</td>
+<td>${escapeHTML(options[1]?.impact?.merit ?? "")}</td>
+<td>${escapeHTML(options[2]?.impact?.merit ?? "")}</td>
+</tr>
+
+<tr>
+<th>リスク</th>
+<td>${escapeHTML(options[0]?.impact?.risk ?? "")}</td>
+<td>${escapeHTML(options[1]?.impact?.risk ?? "")}</td>
+<td>${escapeHTML(options[2]?.impact?.risk ?? "")}</td>
+</tr>
+
+<tr>
+<th>人間関係</th>
+<td>${escapeHTML(options[0]?.impact?.relation ?? "")}</td>
+<td>${escapeHTML(options[1]?.impact?.relation ?? "")}</td>
+<td>${escapeHTML(options[2]?.impact?.relation ?? "")}</td>
+</tr>
+
+<tr>
+<th>お金</th>
+<td>${escapeHTML(options[0]?.impact?.money ?? "")}</td>
+<td>${escapeHTML(options[1]?.impact?.money ?? "")}</td>
+<td>${escapeHTML(options[2]?.impact?.money ?? "")}</td>
+</tr>
+
+<tr>
+<th>メンタル</th>
+<td>${escapeHTML(options[0]?.impact?.mental ?? "")}</td>
+<td>${escapeHTML(options[1]?.impact?.mental ?? "")}</td>
+<td>${escapeHTML(options[2]?.impact?.mental ?? "")}</td>
+</tr>
+
+<tr>
+<th>後悔</th>
+<td>${escapeHTML(options[0]?.impact?.regret ?? "")}</td>
+<td>${escapeHTML(options[1]?.impact?.regret ?? "")}</td>
+<td>${escapeHTML(options[2]?.impact?.regret ?? "")}</td>
+</tr>
+
+</table>
+</div>
+`;
+} {
 return `
 <div class="compare-wrap">
 <table class="compare-table">
