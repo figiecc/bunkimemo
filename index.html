@@ -123,12 +123,7 @@ font-weight: bold;
 margin-top: 10px;
 }
 
-.section-text {
-font-size: 14px;
-margin-bottom: 4px;
-line-height: 1.6;
-}
-
+.section-text,
 .timeline {
 font-size: 14px;
 margin-bottom: 4px;
@@ -180,9 +175,7 @@ line-height: 1.6;
 
 <div class="app-container">
 
-<header>
-分岐メモ
-</header>
+<header>分岐メモ</header>
 
 <main>
 
@@ -204,19 +197,13 @@ line-height: 1.6;
 <textarea id="problem" placeholder="例：サークルを続けるか辞めるか迷っている"></textarea>
 </div>
 
-<button id="analyzeBtn" onclick="analyzeWithAI()">
-AIで分析する
-</button>
-
-<button class="reset-btn" onclick="resetData()">
-保存内容を削除
-</button>
+<button id="analyzeBtn" onclick="analyzeWithAI()">AIで分析する</button>
+<button class="reset-btn" onclick="resetData()">保存内容を削除</button>
 
 <div id="status" class="status"></div>
 <div id="result"></div>
 
 </main>
-
 </div>
 
 <script>
@@ -224,7 +211,6 @@ const API_URL = "https://bunkimemo-api.figie-cc.workers.dev";
 
 window.onload = function() {
 const saved = localStorage.getItem("bunkimemo");
-
 if (saved) {
 const data = JSON.parse(saved);
 document.getElementById("genre").value = data.genre || "人間関係";
@@ -286,8 +272,14 @@ if (!response.ok) {
 throw new Error(data.error || "AI分析に失敗しました。");
 }
 
-const html = renderResult(data.result);
-const statusText = `残り利用回数：${data.remaining}回`;
+const normalized = normalizeResult(data);
+
+if (!normalized || !Array.isArray(normalized.options)) {
+throw new Error("AI結果の形式を読み取れませんでした。");
+}
+
+const html = renderResult(normalized);
+const statusText = `残り利用回数：${data.remaining ?? "不明"}回`;
 
 result.innerHTML = html;
 status.textContent = statusText;
@@ -306,6 +298,32 @@ result.innerHTML = `
 button.disabled = false;
 button.textContent = "AIで分析する";
 }
+}
+
+function normalizeResult(data) {
+if (!data) return null;
+
+let result = data.result || data;
+
+if (result.response && typeof result.response === "object") {
+result = result.response;
+}
+
+if (typeof result.response === "string") {
+try {
+result = JSON.parse(result.response);
+} catch (e) {}
+}
+
+if (typeof result === "string") {
+try {
+result = JSON.parse(result);
+} catch (e) {
+return null;
+}
+}
+
+return result;
 }
 
 function renderResult(data) {
@@ -408,16 +426,19 @@ return `
 }
 
 function renderActionBlock(data) {
+const checkNow = Array.isArray(data.checkNow) ? data.checkNow : [];
+const nextActions = Array.isArray(data.nextActions) ? data.nextActions : [];
+
 return `
 <div class="action-block">
 <div class="section-title">今すぐ確認すること</div>
 <div class="section-text">
-${data.checkNow.map(item => `・${escapeHTML(item)}`).join("<br>")}
+${checkNow.map(item => `・${escapeHTML(item)}`).join("<br>")}
 </div>
 
 <div class="section-title">次に取る行動</div>
 <div class="section-text">
-${data.nextActions.map(item => `・${escapeHTML(item)}`).join("<br>")}
+${nextActions.map(item => `・${escapeHTML(item)}`).join("<br>")}
 </div>
 
 <div class="note">
@@ -428,7 +449,7 @@ ${escapeHTML(data.note || "これは未来予測ではなく、判断材料を�
 }
 
 function escapeHTML(str) {
-return String(str)
+return String(str ?? "")
 .replace(/&/g, "&amp;")
 .replace(/</g, "&lt;")
 .replace(/>/g, "&gt;")
